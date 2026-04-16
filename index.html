@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris Ultra</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+            color: #fff;
+        }
+        canvas {
+            border: 1px solid #fff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="tetris" width="240" height="400"></canvas>
+    <script>
+        // Game Variables
+        const canvas = document.getElementById("tetris");
+        const context = canvas.getContext("2d");
+        context.scale(20, 20);
+        
+        // Set up game grid
+        const arena = Array.from({length: 20}, () => Array(10).fill(0));
+        
+        // Define Tetrominoes shapes
+        const pieces = [
+            [1, 1, 1, 1], // I
+            [1, 1, 0, 0, 1, 1], // O
+            [0, 1, 1, 0, 1, 1], // S
+            [1, 1, 0, 1, 0, 1], // T
+            [1, 0, 0, 1, 1, 1]  // L
+        ];
+
+        // Game Functions
+        function draw() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw arena
+            arena.forEach(row => {
+                row.forEach(value => {
+                    if (value) {
+                        context.fillStyle = "red";
+                        context.fillRect(value % 10, Math.floor(value / 10), 1, 1);
+                    }
+                });
+            });
+        }
+
+        function update() {
+            // Game Logic
+            // Move pieces down, check for collision, etc.
+        }
+
+        document.addEventListener("keydown", (e) => {
+            // Controls for player
+            if (e.key === "ArrowLeft") {
+                // Move left
+            } else if (e.key === "ArrowRight") {
+                // Move right
+            } else if (e.key === "ArrowDown") {
+                // Drop piece
+            }
+        });
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
