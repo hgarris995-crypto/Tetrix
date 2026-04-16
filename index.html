@@ -1,87 +1,247 @@
-// Complete Tetris Ultra Game Code
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tetris Ultra</title>
 
-const canvas = document.getElementById('tetris');
-const context = canvas.getContext('2d');
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
 
-// Game variables
-let board = Array.from({ length: 20 }, () => Array(10).fill(0));
-let currentPiece;
-let gameInterval;
-let score = 0;
+<style>
+body {
+  margin:0;
+  background:#000;
+  color:#0ff;
+  font-family:monospace;
+  text-align:center;
+}
+canvas {
+  border:2px solid #0ff;
+  image-rendering: pixelated;
+}
+button {
+  padding:12px;
+  margin:10px;
+  font-size:18px;
+}
+.hidden { display:none; }
+</style>
+</head>
+<body>
 
-// Menu Variables
-let isGameStarted = false;
+<!-- MENU -->
+<div id="menu">
+  <h1>TETRIS ULTRA</h1>
+  <button onclick="startGame('single')">Single Player</button>
+  <button onclick="startGame('battle')">Battle AI</button>
+</div>
 
-// Piece Mechanics
-const pieces = [
-    [[1, 1, 1, 1]], // I
-    [[1, 1], [1, 1]], // O
-    [[0, 1, 0], [1, 1, 1]], // T
-    [[1, 1, 0], [0, 1, 1]], // S
-    [[0, 1, 1], [1, 1, 0]], // Z
-    [[1, 1, 1], [1, 0, 0]], // L
-    [[1, 1, 1], [0, 0, 1]], // J
-];
+<!-- GAME -->
+<div id="game" class="hidden">
+  <p>Score: <span id="score">0</span></p>
+  <div id="boards">
+    <canvas id="player" width="240" height="400"></canvas>
+    <canvas id="ai" width="240" height="400"></canvas>
+  </div>
+  <button onclick="goMenu()">Back to Menu</button>
+</div>
 
-function drawBoard() {
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    board.forEach((row, y) => {
-        row.forEach((value, x) => {
-            if (value) {
-                context.fillStyle = 'gray';
-                context.fillRect(x * 30, y * 30, 30, 30);
-            }
-        });
-    });
+<script>
+// ---------- PWA REGISTER ----------
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js');
 }
 
-function spawnPiece() {
-    currentPiece = pieces[Math.floor(Math.random() * pieces.length)];
-    // Additional logic to set the position of the piece
+// ---------- STATE ----------
+let mode = "menu";
+
+// ---------- MENU ----------
+function startGame(m) {
+  mode = m;
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+
+  if (mode === "single") {
+    document.getElementById("ai").style.display = "none";
+  } else {
+    document.getElementById("ai").style.display = "inline-block";
+  }
+
+  resetGame();
 }
 
-function drawPiece() {
-    currentPiece.forEach((row, y) => {
-        row.forEach((value, x) => {
-            if (value) {
-                context.fillStyle = 'blue';
-                context.fillRect((x + currentX) * 30, (y + currentY) * 30, 30, 30);
-            }
-        });
-    });
+function goMenu() {
+  mode = "menu";
+  document.getElementById("menu").classList.remove("hidden");
+  document.getElementById("game").classList.add("hidden");
 }
 
-function checkCollision() {
-    // Logic to detect collision
+// ---------- GAME CORE ----------
+const COLS=12, ROWS=20;
+function matrix(w,h){return Array.from({length:h},()=>Array(w).fill(0));}
+
+function piece(t){
+ return {
+  T:[[0,1,0],[1,1,1],[0,0,0]],
+  O:[[2,2],[2,2]],
+  L:[[0,0,3],[3,3,3],[0,0,0]],
+  J:[[4,0,0],[4,4,4],[0,0,0]],
+  I:[[0,5,0,0],[0,5,0,0],[0,5,0,0],[0,5,0,0]],
+  S:[[0,6,6],[6,6,0],[0,0,0]],
+  Z:[[7,7,0],[0,7,7],[0,0,0]]
+ }[t];
 }
 
-function mergePiece() {
-    // Logic to merge piece into board
+function randPiece(){
+ const types='TJLOSZI';
+ return piece(types[Math.random()*types.length|0]);
 }
 
-function clearLines() {
-    // Logic to clear full lines and update score
+function createPlayer(){
+ return {
+  arena:matrix(COLS,ROWS),
+  pos:{x:5,y:0},
+  matrix:randPiece(),
+  score:0,
+  drop:0
+ };
 }
 
-function updateGame() {
-    if (isGameStarted) {
-        // Update game logic
-        drawBoard();
-        drawPiece();
-        if (checkCollision()) {
-            mergePiece();
-            clearLines();
-            spawnPiece();
-        }
+let player, ai;
+
+function resetGame(){
+  player=createPlayer();
+  ai=createPlayer();
+}
+
+// ---------- CANVAS ----------
+const pctx=document.getElementById('player').getContext('2d');
+const actx=document.getElementById('ai').getContext('2d');
+pctx.scale(20,20);
+actx.scale(20,20);
+
+// ---------- DRAW ----------
+function drawMatrix(ctx,m,o){
+ m.forEach((r,y)=>{
+  r.forEach((v,x)=>{
+   if(v){
+    ctx.fillStyle="#0ff";
+    ctx.fillRect(x+o.x,y+o.y,1,1);
+   }
+  });
+ });
+}
+
+function drawBoard(ctx,pl){
+ ctx.fillStyle="#000";
+ ctx.fillRect(0,0,240,400);
+ drawMatrix(ctx,pl.arena,{x:0,y:0});
+ drawMatrix(ctx,pl.matrix,pl.pos);
+}
+
+// ---------- LOGIC ----------
+function collide(ar,p){
+ for(let y=0;y<p.matrix.length;y++){ 
+  for(let x=0;x<p.matrix[y].length;x++){ 
+   if(p.matrix[y][x] &&
+     (ar[y+p.pos.y] && ar[y+p.pos.y][x+p.pos.x])!==0){
+     return true;
+   }
+  }
+ }
+ return false;
+}
+
+function merge(ar,p){
+ p.matrix.forEach((r,y)=>{
+  r.forEach((v,x)=>{
+   if(v) ar[y+p.pos.y][x+p.pos.x]=v;
+  });
+ });
+}
+
+function clearLines(pl, opponent){
+ let lines=0;
+ outer: for(let y=pl.arena.length-1;y>=0;y--){
+  for(let x=0;x<COLS;x++){ 
+   if(!pl.arena[y][x]) continue outer;
+  }
+  pl.arena.splice(y,1);
+  pl.arena.unshift(Array(COLS).fill(0));
+  lines++; y++;
+ }
+ if(lines){
+  pl.score+=lines*10;
+
+  if(mode==="battle"){
+    for(let i=0;i<lines;i++){ 
+      opponent.arena.shift();
+      const row=Array(COLS).fill(8);
+      row[Math.random()*COLS|0]=0;
+      opponent.arena.push(row);
     }
+  }
+ }
 }
 
-// Start Game Function
-function startGame() {
-    isGameStarted = true;
-    spawnPiece();
-    gameInterval = setInterval(updateGame, 1000);
+function drop(pl, opponent){
+ pl.pos.y++;
+ if(collide(pl.arena,pl)){ 
+  pl.pos.y--;
+  merge(pl.arena,pl);
+  clearLines(pl, opponent);
+  pl.matrix=randPiece();
+  pl.pos={x:5,y:0};
+ }
 }
 
-// Event listener for starting the game
-document.getElementById('start-button').addEventListener('click', startGame);
+// ---------- AI ----------
+function aiMove(){
+ if(mode!="battle") return;
+ ai.pos.x += Math.random()>0.5?1:-1;
+ if(collide(ai.arena,ai)) ai.pos.x--;
+}
+
+// ---------- INPUT ----------
+document.addEventListener('keydown',e=>{
+ if(mode==="menu") return;
+
+ if(e.key==="ArrowLeft") player.pos.x--;
+ if(e.key==="ArrowRight") player.pos.x++;
+ if(e.key==="ArrowDown") drop(player, ai);
+});
+
+// ---------- LOOP ----------
+let last=0;
+function update(t=0){
+ const dt=t-last; last=t;
+
+ if(mode!=="menu"){ 
+  player.drop+=dt;
+  ai.drop+=dt;
+
+  if(player.drop>800){
+    drop(player, ai);
+    player.drop=0;
+  }
+
+  if(mode==="battle" && ai.drop>900){
+    aiMove();
+    drop(ai, player);
+    ai.drop=0;
+  }
+
+  drawBoard(pctx,player);
+  if(mode==="battle") drawBoard(actx,ai);
+
+  document.getElementById("score").innerText=player.score;
+ }
+
+ requestAnimationFrame(update);
+}
+
+update();
+</script>
+
+</body>
+</html>
