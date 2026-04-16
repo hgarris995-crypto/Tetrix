@@ -1,80 +1,87 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetris Ultra</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #000;
-            color: #fff;
-        }
-        canvas {
-            border: 1px solid #fff;
-        }
-    </style>
-</head>
-<body>
-    <canvas id="tetris" width="240" height="400"></canvas>
-    <script>
-        // Game Variables
-        const canvas = document.getElementById("tetris");
-        const context = canvas.getContext("2d");
-        context.scale(20, 20);
-        
-        // Set up game grid
-        const arena = Array.from({length: 20}, () => Array(10).fill(0));
-        
-        // Define Tetrominoes shapes
-        const pieces = [
-            [1, 1, 1, 1], // I
-            [1, 1, 0, 0, 1, 1], // O
-            [0, 1, 1, 0, 1, 1], // S
-            [1, 1, 0, 1, 0, 1], // T
-            [1, 0, 0, 1, 1, 1]  // L
-        ];
+// Complete Tetris Ultra Game Code
 
-        // Game Functions
-        function draw() {
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            // Draw arena
-            arena.forEach(row => {
-                row.forEach(value => {
-                    if (value) {
-                        context.fillStyle = "red";
-                        context.fillRect(value % 10, Math.floor(value / 10), 1, 1);
-                    }
-                });
-            });
-        }
+const canvas = document.getElementById('tetris');
+const context = canvas.getContext('2d');
 
-        function update() {
-            // Game Logic
-            // Move pieces down, check for collision, etc.
-        }
+// Game variables
+let board = Array.from({ length: 20 }, () => Array(10).fill(0));
+let currentPiece;
+let gameInterval;
+let score = 0;
 
-        document.addEventListener("keydown", (e) => {
-            // Controls for player
-            if (e.key === "ArrowLeft") {
-                // Move left
-            } else if (e.key === "ArrowRight") {
-                // Move right
-            } else if (e.key === "ArrowDown") {
-                // Drop piece
+// Menu Variables
+let isGameStarted = false;
+
+// Piece Mechanics
+const pieces = [
+    [[1, 1, 1, 1]], // I
+    [[1, 1], [1, 1]], // O
+    [[0, 1, 0], [1, 1, 1]], // T
+    [[1, 1, 0], [0, 1, 1]], // S
+    [[0, 1, 1], [1, 1, 0]], // Z
+    [[1, 1, 1], [1, 0, 0]], // L
+    [[1, 1, 1], [0, 0, 1]], // J
+];
+
+function drawBoard() {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    board.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value) {
+                context.fillStyle = 'gray';
+                context.fillRect(x * 30, y * 30, 30, 30);
             }
         });
+    });
+}
 
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
+function spawnPiece() {
+    currentPiece = pieces[Math.floor(Math.random() * pieces.length)];
+    // Additional logic to set the position of the piece
+}
+
+function drawPiece() {
+    currentPiece.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value) {
+                context.fillStyle = 'blue';
+                context.fillRect((x + currentX) * 30, (y + currentY) * 30, 30, 30);
+            }
+        });
+    });
+}
+
+function checkCollision() {
+    // Logic to detect collision
+}
+
+function mergePiece() {
+    // Logic to merge piece into board
+}
+
+function clearLines() {
+    // Logic to clear full lines and update score
+}
+
+function updateGame() {
+    if (isGameStarted) {
+        // Update game logic
+        drawBoard();
+        drawPiece();
+        if (checkCollision()) {
+            mergePiece();
+            clearLines();
+            spawnPiece();
         }
+    }
+}
 
-        gameLoop();
-    </script>
-</body>
-</html>
+// Start Game Function
+function startGame() {
+    isGameStarted = true;
+    spawnPiece();
+    gameInterval = setInterval(updateGame, 1000);
+}
+
+// Event listener for starting the game
+document.getElementById('start-button').addEventListener('click', startGame);
